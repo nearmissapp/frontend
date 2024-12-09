@@ -29,8 +29,13 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack
+        screenOptions={{
+          headerShown: false, // 상단 헤더 숨기기
+        }}
+      >
+        {/* "index"와 다른 화면 정의 */}
+        <Stack.Screen name="index" />
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />

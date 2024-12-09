@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert, Image, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TextInput, Alert, Image, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { BleManager, Device } from 'react-native-ble-plx';
 import * as ImagePicker from 'expo-image-picker';
 import { Camera } from 'expo-camera';
@@ -87,7 +87,7 @@ export default function ReportScreen() {
       } else {
         Alert.alert('스캔 완료', '등록된 비콘을 찾을 수 없습니다.');
       }
-    }, 10000);
+    }, 5000); // 스캔 시간 5초로 줄임
   };
 
   const handleSubmit = () => {
@@ -104,18 +104,17 @@ export default function ReportScreen() {
       return;
     }
     Alert.alert(
-        '신고 완료',
-        `신고 내용: ${comment}\n태그된 비콘: ${closestDevice.name}`,
-        // (${closestDevice.location})\n사진 경로: ${photo}
-        [
-          {
-            text: '확인',
-            onPress: () => {
-              router.push('/main_user'); // main_user 화면으로 이동
-            },
+      '신고 완료',
+      `신고 내용: ${comment}\n태그된 비콘: ${closestDevice.name}`,
+      [
+        {
+          text: '확인',
+          onPress: () => {
+            router.push('/main_user'); // main_user 화면으로 이동
           },
-        ]
-      );
+        },
+      ]
+    );
   };
 
   return (
@@ -123,10 +122,10 @@ export default function ReportScreen() {
       <Text style={styles.title}>유해위험 등록</Text>
 
       <View style={styles.buttonContainer}>
-        <TouchableOpacity style={[styles.button, { backgroundColor: '#4CAF50' }]} onPress={takePhoto}>
+        <TouchableOpacity style={styles.blackButton} onPress={takePhoto}>
           <Text style={styles.buttonText}>사진 촬영</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.button, { backgroundColor: '#FF9800' }]} onPress={pickFromAlbum}>
+        <TouchableOpacity style={styles.blackButton} onPress={pickFromAlbum}>
           <Text style={styles.buttonText}>앨범에서 선택</Text>
         </TouchableOpacity>
       </View>
@@ -136,11 +135,12 @@ export default function ReportScreen() {
       <TextInput
         style={styles.input}
         placeholder="코멘트를 입력하세요"
+        placeholderTextColor="#aaa"
         value={comment}
         onChangeText={setComment}
       />
 
-      <TouchableOpacity style={[styles.button, { backgroundColor: '#2196F3' }]} onPress={scanForBeacons}>
+      <TouchableOpacity style={styles.blackButton} onPress={scanForBeacons}>
         <Text style={styles.buttonText}>비콘 태그 스캔</Text>
       </TouchableOpacity>
 
@@ -150,7 +150,7 @@ export default function ReportScreen() {
         </Text>
       )}
 
-      <TouchableOpacity style={[styles.button, { backgroundColor: '#4CAF50' }]} onPress={handleSubmit}>
+      <TouchableOpacity style={styles.blackButton} onPress={handleSubmit}>
         <Text style={styles.buttonText}>제출하기</Text>
       </TouchableOpacity>
     </ScrollView>
@@ -158,31 +158,34 @@ export default function ReportScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5', padding: 20 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center' },
+  container: { flex: 1, backgroundColor: '#f9f9f9', padding: 20 },
+  title: { fontSize: 28, fontWeight: 'bold', marginBottom: 20, textAlign: 'center', color: '#333' },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 20,
+    marginTop: 30,
   },
-  button: {
+  blackButton: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 15,
-    borderRadius: 8,
+    borderRadius: 10,
     marginHorizontal: 5,
+    backgroundColor: '#000',
   },
   buttonText: { fontSize: 16, fontWeight: 'bold', color: '#fff' },
   imagePreview: { width: '100%', height: 200, marginVertical: 20, borderRadius: 10, backgroundColor: '#E0E0E0' },
   input: {
     borderWidth: 1,
-    borderColor: '#CCC',
+    borderColor: '#333',
     padding: 15,
     borderRadius: 10,
     marginBottom: 20,
     fontSize: 16,
-    backgroundColor: '#FFF',
+    backgroundColor: '#fff',
+    color: '#000',
   },
   scannedInfo: {
     fontSize: 16,
