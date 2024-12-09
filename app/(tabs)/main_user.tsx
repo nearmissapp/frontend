@@ -20,10 +20,10 @@ export default function MainUserScreen() {
       {/* 상단바 */}
       <View style={styles.topBar}>
         <TouchableOpacity>
-          <Image source={require('../../assets/images/sponge.png')} style={styles.icon} />
+          <Image source={require('../../assets/images/chick.png')} style={styles.icon} />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => router.push('/')}>
-          <Image source={require('../../assets/images/sponge.png')} style={styles.icon} />
+          <Image source={require('../../assets/images/chick.png')} style={styles.icon} />
         </TouchableOpacity>
       </View>
 
@@ -49,7 +49,7 @@ export default function MainUserScreen() {
       <Text style={styles.sectionTitle}>등록한 위험요인</Text>
       <TouchableOpacity onPress={() => router.push('/details_user')}>
         <View style={styles.card}>
-          <Image source={require('../../assets/images/sponge.png')} style={styles.thumbnail} />
+          <Image source={require('../../assets/images/chick.png')} style={styles.thumbnail} />
           <View>
             <Text>슬리브 리프트 센서 파손</Text>
             <Text>2024-11-14</Text>
@@ -67,7 +67,7 @@ export default function MainUserScreen() {
       </View>
       <TouchableOpacity onPress={() => router.push('/details_department')}>
         <View style={styles.card}>
-          <Image source={require('../../assets/images/sponge.png')} style={styles.thumbnail} />
+          <Image source={require('../../assets/images/chick.png')} style={styles.thumbnail} />
           <View>
             <Text>안전발판 부식</Text>
             <Text>2024-11-05</Text>
