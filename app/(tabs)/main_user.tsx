@@ -1,19 +1,59 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, Animated } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, Text, StyleSheet, TouchableOpacity, Image, FlatList } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+
+// 타입 정의
+type ResponseDataItem = {
+  comment: string; // 정상 데이터
+  created_at: string; // 타임스탬프
+  id: number; // 고유 ID
+  status: string; // 상태
+};
 
 export default function MainUserScreen() {
   const router = useRouter();
-  const [levelProgress] = useState(new Animated.Value(0)); // Level 게이지 초기값 0
+  const { email } = useLocalSearchParams(); // 로그인 화면에서 전달된 이메일
+  const [reports, setReports] = useState<ResponseDataItem[]>([]); // 신고 내역 상태
 
   useEffect(() => {
-    // 왼쪽에서 오른쪽으로 차오르는 애니메이션
-    Animated.timing(levelProgress, {
-      toValue: 80, // 게이지 진행 길이 (80%를 px로 표현)
-      duration: 2000, // 애니메이션 지속 시간 (밀리초)
-      useNativeDriver: false,
-    }).start();
-  }, []);
+    // 신고 내역 API 호출
+    const fetchReports = async () => {
+      try {
+        const formData = new FormData();
+        formData.append('reporter', email as string); // email이 string으로 지정되었음을 명시
+
+        const response = await fetch('https://a71b-182-172-74-82.ngrok-free.app/login', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.data) {
+          setReports(data.data); // 신고 내역 설정
+        } else {
+          setReports([]); // 데이터가 없을 경우 초기화
+        }
+      } catch (error) {
+        console.error('Failed to fetch reports:', error);
+        setReports([]); // 오류 발생 시 초기화
+      }
+    };
+
+    fetchReports();
+  }, [email]);
+
+  const renderReportItem = ({ item }: { item: ResponseDataItem }) => (
+    <View style={styles.card}>
+      <View>
+        <Text style={styles.reportTitle}>{item.comment}</Text>
+        <Text style={styles.reportDate}>{new Date(item.created_at).toLocaleDateString()}</Text>
+      </View>
+      <Text style={[styles.statusBadge, item.status === 'completed' ? styles.completed : styles.inProgress]}>
+        {item.status === 'completed' ? '완료' : '진행중'}
+      </Text>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -34,47 +74,22 @@ export default function MainUserScreen() {
         {/* 게이지 */}
         <View style={styles.levelBarContainer}>
           <View style={styles.levelBarBackground} />
-          <Animated.View
-            style={[
-              styles.levelBarProgress,
-              {
-                width: levelProgress, // 애니메이션으로 폭이 증가
-              },
-            ]}
-          />
+          <View style={[styles.levelBarProgress, { width: '80%' }]} />
         </View>
       </View>
 
       {/* 등록한 위험요인 */}
       <Text style={styles.sectionTitle}>등록한 위험요인</Text>
-      <TouchableOpacity onPress={() => router.push('/details_user')}>
-        <View style={styles.card}>
-          <Image source={require('../../assets/images/chick.png')} style={styles.thumbnail} />
-          <View>
-            <Text>슬리브 리프트 센서 파손</Text>
-            <Text>2024-11-14</Text>
-            <Text>진행중</Text>
-          </View>
-        </View>
-      </TouchableOpacity>
-
-      {/* 내 부서 위험요인 */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>내 부서 위험요인</Text>
-        <TouchableOpacity onPress={() => router.push('/see_all')}>
-          <Text style={styles.seeAll}>See All</Text>
-        </TouchableOpacity>
-      </View>
-      <TouchableOpacity onPress={() => router.push('/details_department')}>
-        <View style={styles.card}>
-          <Image source={require('../../assets/images/chick.png')} style={styles.thumbnail} />
-          <View>
-            <Text>안전발판 부식</Text>
-            <Text>2024-11-05</Text>
-            <Text>완료</Text>
-          </View>
-        </View>
-      </TouchableOpacity>
+      {reports.length > 0 ? (
+        <FlatList
+          data={reports}
+          renderItem={renderReportItem}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={styles.listContainer}
+        />
+      ) : (
+        <Text style={styles.noDataText}>등록된 신고 내역이 없습니다.</Text>
+      )}
 
       {/* 플로팅 버튼 */}
       <TouchableOpacity style={styles.floatingButton} onPress={() => router.push('/report')}>
@@ -109,45 +124,71 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   levelBarContainer: {
-    width: '50%', // 전체 게이지 폭 (화면의 80%)
-    height: 15, // 게이지 높이
+    width: '50%',
+    height: 15,
     marginTop: 10,
     position: 'relative',
     backgroundColor: '#E0E0E0',
     borderRadius: 10,
-    overflow: 'hidden', // 게이지가 컨테이너를 벗어나지 않도록 설정
+    overflow: 'hidden',
   },
   levelBarBackground: {
-    backgroundColor: '#E0E0E0', // 게이지 배경 색상
+    backgroundColor: '#E0E0E0',
     width: '100%',
     height: '100%',
     borderRadius: 10,
   },
   levelBarProgress: {
-    backgroundColor: '#4CAF50', // 진행 색상
+    backgroundColor: '#4CAF50',
     height: '100%',
     position: 'absolute',
     left: 0,
     top: 0,
   },
   sectionTitle: { fontSize: 20, fontWeight: 'bold', marginVertical: 15, paddingHorizontal: 10 },
-  sectionHeader: {
+  listContainer: {
+    paddingHorizontal: 10,
+  },
+  card: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 10,
-  },
-  seeAll: { fontSize: 16, color: '#007BFF' },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 15,
     padding: 10,
     backgroundColor: '#ffffff',
-    borderRadius: 5,
-    marginHorizontal: 10,
+    borderRadius: 8,
+    marginBottom: 10,
+    elevation: 2,
   },
-  thumbnail: { width: 50, height: 50, marginRight: 10, borderRadius: 5 },
+  reportTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  reportDate: {
+    fontSize: 14,
+    color: '#777',
+  },
+  statusBadge: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  completed: {
+    backgroundColor: '#4CAF50',
+    color: '#fff',
+  },
+  inProgress: {
+    backgroundColor: '#FF6347',
+    color: '#fff',
+  },
+  noDataText: {
+    textAlign: 'center',
+    color: '#777',
+    marginVertical: 20,
+    fontSize: 16,
+  },
   floatingButton: {
     position: 'absolute',
     bottom: 20,
