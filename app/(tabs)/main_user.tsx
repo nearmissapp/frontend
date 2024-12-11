@@ -22,7 +22,7 @@ export default function MainUserScreen() {
         const formData = new FormData();
         formData.append('reporter', email as string); // email이 string으로 지정되었음을 명시
 
-        const response = await fetch('https://a71b-182-172-74-82.ngrok-free.app/login', {
+        const response = await fetch('https://charmed-hare-scarcely.ngrok-free.app/login', {
           method: 'POST',
           body: formData,
         });
