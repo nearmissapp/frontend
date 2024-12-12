@@ -1,27 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  Switch,
-  Image,
   Modal,
   Alert,
+  Switch,
+  Image,
   ActivityIndicator,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
+import { Camera } from 'expo-camera';
+import { BleManager, Device } from 'react-native-ble-plx';
+
+const BLE_DEVICES = [
+  { id: 'C2:06:B7:D9:55:D0', name: 'F1 MAIN Motor', location: '2열연' },
+  { id: 'E0:17:C9:90:18:2A', name: 'F2 MAIN Motor', location: '2열연' },
+  { id: 'C6:39:01:E8:0A:6D', name: 'F3 MAIN Motor', location: '2열연' },
+  { id: 'DB:1D:8B:49:6D:D5', name: 'F4 MAIN Motor', location: '2열연' },
+  { id: 'CF:BC:9B:7D:15:B9', name: 'F5 MAIN Motor', location: '2열연' },
+];
 
 export default function PhotoRegistration() {
   const [comment, setComment] = useState('');
   const [location, setLocation] = useState('');
-  const [anonymous, setAnonymous] = useState(false);
-  const [isTaggingModalVisible, setIsTaggingModalVisible] = useState(false);
+  const [photo, setPhoto] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRegistered, setIsRegistered] = useState(false);
+  const [isTaggingModalVisible, setIsTaggingModalVisible] = useState(false);
+  const [anonymous, setAnonymous] = useState(false);
+  const [closestDevice, setClosestDevice] = useState<{ id: string; name: string; location: string } | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
   const router = useRouter();
   const { email } = useLocalSearchParams();
+  const manager = new BleManager();
+
+  useEffect(() => {
+    return () => {
+      manager.destroy();
+    };
+  }, []);
 
   const getCurrentTime = () => {
     const now = new Date();
@@ -34,29 +55,114 @@ export default function PhotoRegistration() {
     });
   };
 
-  const handleRegister = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      setIsRegistered(true);
-    }, 5000);
+  if (!email) {
+    Alert.alert('오류', '로그인 이메일이 전달되지 않았습니다.');
+    router.back();
+    return null;
+  }
+
+  const openCamera = async () => {
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+
+    const { status } = await Camera.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('권한 필요', '카메라 접근 권한을 허용해주세요.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: false,
+      quality: 0.7,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setPhoto(result.assets[0].uri);
+    } else {
+      Alert.alert('오류', '이미지를 선택하지 않았습니다.');
+    }
   };
 
-  const handleImageClick = (locationName: string) => {
-    Alert.alert(
-      '위치정보 태깅 완료!',
-      locationName, // 메시지로 locationName 전달
-      [
-        { text: '확인', onPress: () => setIsTaggingModalVisible(false) },
-        { text: '다시 태깅하기', onPress: () => {} },
-        { text: '직접 입력하기', onPress: () => {} },
-      ]
-    );
+  const scanForBeacons = () => {
+    setIsScanning(true);
+    let closest: { id: string; name: string; location: string; rssi: number } | null = null;
+
+    manager.startDeviceScan(null, null, (error, device: Device | null) => {
+      if (error) {
+        Alert.alert('스캔 실패', error.message);
+        setIsScanning(false);
+        return;
+      }
+
+      if (device?.id && device?.rssi) {
+        const matchedDevice = BLE_DEVICES.find((d) => d.id === device.id);
+        if (matchedDevice) {
+          if (!closest || (device.rssi && device.rssi > closest.rssi)) {
+            closest = { ...matchedDevice, rssi: device.rssi };
+          }
+        }
+      }
+    });
+
+    setTimeout(() => {
+      manager.stopDeviceScan();
+      setIsScanning(false);
+      if (closest) {
+        setClosestDevice(closest);
+        setLocation(`${closest.name} (${closest.location})`);
+        setIsTaggingModalVisible(false);
+        Alert.alert('가장 가까운 비콘', `${closest.name} (${closest.location})`);
+      } else {
+        Alert.alert('스캔 완료', '등록된 비콘을 찾을 수 없습니다.');
+      }
+    }, 3000);
+  };
+
+  const handleRegister = async () => {
+    if (!photo) {
+      Alert.alert('오류', '사진이 없습니다. 사진을 추가해주세요.');
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const formData = new FormData();
+
+      formData.append('reporter', email as string);
+      formData.append('comment', comment);
+      formData.append('location', location);
+
+      formData.append('image', {
+        uri: photo,
+        type: 'image/jpeg',
+        name: 'photo.jpg',
+      } as any);
+
+      const response = await fetch('https://charmed-hare-scarcely.ngrok-free.app/call-gpt', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+        },
+        body: formData,
+      });
+
+      if (response.ok) {
+        setIsRegistered(true);
+      } else {
+        const errorText = await response.text();
+        console.error('Server response:', errorText);
+        Alert.alert('오류', '잠재위험을 등록하지 못했습니다.');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      Alert.alert('오류', '서버와의 연결에 실패했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>잠재위험 등록하기</Text>
         <TouchableOpacity onPress={() => router.back()}>
@@ -64,30 +170,30 @@ export default function PhotoRegistration() {
         </TouchableOpacity>
       </View>
 
-      {/* Photo Insert Placeholder */}
-      <TouchableOpacity style={styles.imagePlaceholder} onPress={() => {}}>
-        <Text style={styles.imagePlaceholderText}>사진을 찍으려면 클릭하세요</Text>
-      </TouchableOpacity>
-
-      {/* Comment Section */}
-      <View style={styles.inputContainer}>
-        <TouchableOpacity style={styles.commentBox} onPress={() => {}}>
-          <TextInput
-            style={styles.commentInput}
-            placeholder="코멘트를 입력하세요"
-            value={comment}
-            onChangeText={setComment}
-          />
-        </TouchableOpacity>
+      <View style={styles.imagePlaceholder}>
+        {photo ? (
+          <Image source={{ uri: photo }} style={styles.previewImage} />
+        ) : (
+          <TouchableOpacity onPress={openCamera}>
+            <Text style={styles.placeholderText}>사진을 찍으려면 여기를 누르세요</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* Time Display */}
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.commentInput}
+          placeholder="코멘트를 입력하세요"
+          value={comment}
+          onChangeText={setComment}
+        />
+      </View>
+
       <View style={styles.infoRow}>
         <Text style={styles.infoLabel}>시간</Text>
         <Text style={styles.infoValue}>{getCurrentTime()}</Text>
       </View>
 
-      {/* Location Input and Tagging */}
       <View style={styles.locationContainer}>
         <Text style={styles.infoLabel}>위치정보</Text>
         <TextInput
@@ -99,22 +205,19 @@ export default function PhotoRegistration() {
         <TouchableOpacity
           style={styles.locationTagButton}
           onPress={() => setIsTaggingModalVisible(true)}>
-          <Text style={styles.locationTagButtonText}>위치정보 태깅</Text>
+          <Text style={styles.locationTagButtonText}>비콘 태깅</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Anonymous Toggle */}
       <View style={styles.infoRow}>
         <Text style={styles.infoLabel}>익명으로 올리기</Text>
         <Switch value={anonymous} onValueChange={setAnonymous} />
       </View>
 
-      {/* Submit Button */}
       <TouchableOpacity style={styles.submitButton} onPress={handleRegister}>
         <Text style={styles.submitButtonText}>잠재위험 등록</Text>
       </TouchableOpacity>
 
-      {/* Tagging Modal */}
       <Modal
         visible={isTaggingModalVisible}
         animationType="slide"
@@ -125,50 +228,34 @@ export default function PhotoRegistration() {
             onPress={() => setIsTaggingModalVisible(false)}>
             <Text style={styles.closeButtonText}>X</Text>
           </TouchableOpacity>
-          <Text style={styles.modalText}>위치정보를 태깅해주세요</Text>
-          <View style={styles.imageRow}>
-            <TouchableOpacity onPress={() => handleImageClick('열연부\nF4 MAIN MOTOR')}>
-                <Image source={require('../../assets/images/chick.png')} style={styles.taggingImage} />
+          <Text style={styles.modalText}>비콘을 스캔 중입니다...</Text>
+          <ActivityIndicator size="large" color="#007BFF" />
+          {isScanning ? null : (
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={scanForBeacons}>
+              <Text style={styles.submitButtonText}>스캔 시작</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleImageClick('압연부\nF3 MAIN MOTOR')}>
-                <Image source={require('../../assets/images/chick.png')} style={styles.taggingImage} />
-            </TouchableOpacity>
-          </View>
+          )}
         </View>
       </Modal>
 
-      {/* Loading Modal */}
       <Modal visible={isLoading} animationType="fade" transparent={true}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>
-            AI가 위험요인을 찾고
-          </Text>
-          <Text style={styles.loadingText}>
-            담당자를 지정하고 있어요.
-          </Text>
+          <Text style={styles.loadingText}>등록 중입니다...</Text>
           <ActivityIndicator size="large" color="#007BFF" />
         </View>
       </Modal>
 
-      {/* Registration Complete Modal */}
-      <Modal
-        visible={isRegistered}
-        animationType="slide"
-        transparent={false}>
+      <Modal visible={isRegistered} animationType="slide" transparent={false}>
         <View style={styles.modalContainer}>
           <Text style={styles.modalText}>등록 완료 되었습니다!</Text>
-          <Text style={styles.modalText}>내가 받은 포인트는 20점!</Text>
-
           <TouchableOpacity
             style={styles.homeButton}
             onPress={() => {
-                setIsRegistered(false); // 모달 닫기
-                router.push({
-                    pathname: '/main_man',
-                    params: { email: email }, // email 전달
-                  });
-            }}
-            >
+              setIsRegistered(false);
+              router.push({ pathname: '/main_user', params: { email: email } });
+            }}>
             <Text style={styles.homeButtonText}>홈으로 가기</Text>
           </TouchableOpacity>
         </View>
@@ -210,32 +297,25 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     backgroundColor: '#f9f9f9',
   },
-  imagePlaceholderText: {
-    fontSize: 16,
+  previewImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
+  },
+  placeholderText: {
     color: '#aaa',
+    fontSize: 16,
   },
   inputContainer: {
     marginBottom: 20,
   },
-  commentBox: {
+  commentInput: {
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 10,
     padding: 10,
-  },
-  commentInput: {
     fontSize: 16,
     color: '#333',
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  infoValue: {
-    fontSize: 16,
-    color: '#555',
   },
   locationContainer: {
     marginBottom: 20,
@@ -254,18 +334,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 10,
   },
-  locationTagButton: {
-    backgroundColor: '#FB514B',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 10,
-    alignSelf: 'flex-start',
-  },
-  locationTagButtonText: {
-    fontSize: 16,
-    color: '#fff',
-    textAlign: 'center',
-  },
   submitButton: {
     backgroundColor: '#FB514B',
     padding: 15,
@@ -276,6 +344,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#fff',
     fontWeight: 'bold',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FB514B',
+  },
+  loadingText: {
+    fontSize: 22,
+    color: '#fff',
+    marginBottom: 20,
+    textAlign: 'center',
   },
   modalContainer: {
     flex: 1,
@@ -289,17 +369,39 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center',
   },
-  imageRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginVertical: 20,
-  },
-  taggingImage: {
-    width: 120,
-    height: 120,
+  homeButton: {
+    backgroundColor: '#FB514B',
+    padding: 15,
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#ccc',
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  homeButtonText: {
+    fontSize: 18,
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  infoValue: {
+    fontSize: 16,
+    color: '#555',
+  },
+  locationTagButton: {
+    backgroundColor: '#FB514B',
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+  },
+  locationTagButtonText: {
+    fontSize: 16,
+    color: '#fff',
+    textAlign: 'center',
   },
   closeButton: {
     position: 'absolute',
@@ -314,29 +416,5 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FB514B',
-  },
-  loadingText: {
-    fontSize: 22,
-    color: '#fff',
-    marginBottom: 20,
-    textAlign: 'center',
-    lineHeight: 30, // 줄 간격 조정
-  },
-  homeButton: {
-    backgroundColor: '#FB514B',
-    padding: 15,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  homeButtonText: {
-    fontSize: 18,
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-});  
+
+});

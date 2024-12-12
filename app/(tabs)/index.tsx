@@ -42,10 +42,10 @@ export default function LoginScreen() {
         // "type" 값에 따라 페이지 이동
         const userType = data.type.toLowerCase();
         if (userType === 'reporter') {
-          Alert.alert('로그인 성공', `환영합니다, ${email}! (main_user 그룹)`);
+          // Alert.alert('로그인 성공', `환영합니다, ${email}! (main_user 그룹)`);
           router.push({ pathname: '/main_user', params: { email, data } });
         } else if (userType === 'manager') {
-          Alert.alert('로그인 성공', `환영합니다, ${email}! (main_man 그룹)`);
+          // Alert.alert('로그인 성공', `환영합니다, ${email}! (main_man 그룹)`);
           router.push({ pathname: '/main_man', params: { email, data } });
         } else {
           Alert.alert('로그인 실패', '유효하지 않은 사용자 유형입니다.');

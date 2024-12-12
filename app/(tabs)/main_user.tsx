@@ -60,10 +60,10 @@ export default function MainUserScreen() {
       {/* 상단바 */}
       <View style={styles.topBar}>
         <TouchableOpacity>
-          <Image source={require('../../assets/images/chick.png')} style={styles.icon} />
+          <Image source={require('../../assets/images/three_line_menu.png')} style={styles.icon} />
         </TouchableOpacity>
         <TouchableOpacity onPress={() => router.push('/')}>
-          <Image source={require('../../assets/images/chick.png')} style={styles.icon} />
+          <Image source={require('../../assets/images/user_person.png')} style={styles.icon} />
         </TouchableOpacity>
       </View>
 
@@ -105,10 +105,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 30,
-    backgroundColor: '#ffffff',
+    padding: 25,
+    backgroundColor: '#FF6347',
   },
-  icon: { width: 24, height: 24 },
+  icon: { width: 30, height: 30 },
   profileSection: {
     alignItems: 'center',
     marginVertical: 20,
