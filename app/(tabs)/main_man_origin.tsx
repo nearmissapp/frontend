@@ -22,7 +22,7 @@ export default function MainUserScreen() {
         const formData = new FormData();
         formData.append('reporter', email as string); // email이 string으로 지정되었음을 명시
 
-        const response = await fetch('https://charmed-hare-scarcely.ngrok-free.app/list-reporter', {
+        const response = await fetch('https://charmed-hare-scarcely.ngrok-free.app/login', {
           method: 'POST',
           body: formData,
         });
@@ -70,7 +70,7 @@ export default function MainUserScreen() {
       {/* 병아리 이미지 및 텍스트 */}
       <View style={styles.profileSection}>
         <Image source={require('../../assets/images/chick.png')} style={styles.chickImage} />
-        <Text style={styles.levelText}>Lv. 1 열정많은 병아리</Text>
+        <Text style={styles.levelText}>Lv. 2 조치자 페이지</Text>
         {/* 게이지 */}
         <View style={styles.levelBarContainer}>
           <View style={styles.levelBarBackground} />
@@ -92,7 +92,7 @@ export default function MainUserScreen() {
       )}
 
       {/* 플로팅 버튼 */}
-      <TouchableOpacity style={styles.floatingButton} onPress={() => router.push({ pathname: '/test', params: { email } })}>
+      <TouchableOpacity style={styles.floatingButton} onPress={() => router.push('/report')}>
         <Text style={styles.floatingButtonText}>+</Text>
       </TouchableOpacity>
     </View>

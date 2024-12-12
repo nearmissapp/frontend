@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  ScrollView
 } from 'react-native';
 import { useRouter } from 'expo-router';
 
@@ -20,26 +21,37 @@ export default function LoginScreen() {
       Alert.alert('로그인 실패', '이메일과 비밀번호를 입력하세요.');
       return;
     }
-
+  
     try {
-      // API 호출
+      // FormData 생성 및 데이터 추가
       const formData = new FormData();
-      formData.append('reporter', email);
-
+      formData.append('email', email);
+      formData.append('password', password);
+  
+      // API 호출
       const response = await fetch('https://charmed-hare-scarcely.ngrok-free.app/login', {
         method: 'POST',
-        body: formData,
+        body: formData, // FormData 전달
       });
-
+  
+      // 서버 응답 처리
       const data = await response.json();
-
-      if (response.ok && data.data.length > 0) {
-        // 성공적으로 데이터를 가져온 경우
-        Alert.alert('로그인 성공', `환영합니다, ${email}!`);
-        router.push({ pathname: '/main_user', params: { email, reports: data.data } });
+      console.log('Response Data:', data);
+  
+      if (response.ok && data.type) {
+        // "type" 값에 따라 페이지 이동
+        const userType = data.type.toLowerCase();
+        if (userType === 'reporter') {
+          Alert.alert('로그인 성공', `환영합니다, ${email}! (main_user 그룹)`);
+          router.push({ pathname: '/main_user', params: { email, data } });
+        } else if (userType === 'manager') {
+          Alert.alert('로그인 성공', `환영합니다, ${email}! (main_man 그룹)`);
+          router.push({ pathname: '/main_man', params: { email, data } });
+        } else {
+          Alert.alert('로그인 실패', '유효하지 않은 사용자 유형입니다.');
+        }
       } else {
-        // DB에 이메일이 없는 경우
-        Alert.alert('로그인 실패', '해당 이메일의 데이터가 없습니다.');
+        Alert.alert('로그인 실패', data.message || '해당 이메일의 데이터가 없습니다.');
       }
     } catch (error) {
       // 네트워크 또는 서버 오류 처리
@@ -144,7 +156,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   loginButton: {
-    backgroundColor: '#000',
+    backgroundColor: '#FB514B',
     borderRadius: 8,
     paddingVertical: 15,
     alignItems: 'center',

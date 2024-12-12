@@ -4,15 +4,16 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 
 // 타입 정의
 type ResponseDataItem = {
-  comment: string; // 정상 데이터
-  created_at: string; // 타임스탬프
   id: number; // 고유 ID
-  status: string; // 상태
+  comment: string; // 댓글 내용
+  created_at: string; // 생성일시
+  status: string; // 상태 (completed/in-progress)
+  image_compressed_base64: string; // Base64 인코딩된 이미지 데이터
 };
 
-export default function MainUserScreen() {
+export default function MainManScreen() {
   const router = useRouter();
-  const { email } = useLocalSearchParams(); // 로그인 화면에서 전달된 이메일
+  const { email } = useLocalSearchParams(); // 로그인 시 전달받은 email
   const [reports, setReports] = useState<ResponseDataItem[]>([]); // 신고 내역 상태
 
   useEffect(() => {
@@ -20,9 +21,9 @@ export default function MainUserScreen() {
     const fetchReports = async () => {
       try {
         const formData = new FormData();
-        formData.append('reporter', email as string); // email이 string으로 지정되었음을 명시
+        formData.append('manager', email as string);
 
-        const response = await fetch('https://charmed-hare-scarcely.ngrok-free.app/list-reporter', {
+        const response = await fetch('https://charmed-hare-scarcely.ngrok-free.app/list-manager', {
           method: 'POST',
           body: formData,
         });
@@ -44,15 +45,41 @@ export default function MainUserScreen() {
   }, [email]);
 
   const renderReportItem = ({ item }: { item: ResponseDataItem }) => (
-    <View style={styles.card}>
-      <View>
+    <TouchableOpacity
+      style={styles.card}
+      onPress={() =>
+        router.push({
+          pathname: '/status',
+          params: {
+            id: item.id,
+            email: email,
+            comment: item.comment,
+            created_at: item.created_at,
+          },
+        })
+      }
+    >
+      <View style={styles.cardContent}>
         <Text style={styles.reportTitle}>{item.comment}</Text>
-        <Text style={styles.reportDate}>{new Date(item.created_at).toLocaleDateString()}</Text>
+        <Text style={styles.reportDate}>
+          {new Date(item.created_at).toLocaleDateString('ko-KR')}
+        </Text>
+        <Text
+          style={[
+            styles.statusBadge,
+            item.status === 'completed' ? styles.completed : styles.inProgress,
+          ]}
+        >
+          {item.status === 'completed' ? '완료' : '진행중'}
+        </Text>
       </View>
-      <Text style={[styles.statusBadge, item.status === 'completed' ? styles.completed : styles.inProgress]}>
-        {item.status === 'completed' ? '완료' : '진행중'}
-      </Text>
-    </View>
+      {item.image_compressed_base64 ? (
+        <Image
+          source={{ uri: item.image_compressed_base64 }}
+          style={styles.reportImage}
+        />
+      ) : null }
+    </TouchableOpacity>
   );
 
   return (
@@ -70,11 +97,11 @@ export default function MainUserScreen() {
       {/* 병아리 이미지 및 텍스트 */}
       <View style={styles.profileSection}>
         <Image source={require('../../assets/images/chick.png')} style={styles.chickImage} />
-        <Text style={styles.levelText}>Lv. 1 열정많은 병아리</Text>
+        <Text style={styles.levelText}>Lv. 2 조치자 페이지</Text>
         {/* 게이지 */}
         <View style={styles.levelBarContainer}>
           <View style={styles.levelBarBackground} />
-          <View style={[styles.levelBarProgress, { width: '80%' }]} />
+          <View style={[styles.levelBarProgress, { width: '75%' }]} />
         </View>
       </View>
 
@@ -87,12 +114,17 @@ export default function MainUserScreen() {
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.listContainer}
         />
+        
+
       ) : (
         <Text style={styles.noDataText}>등록된 신고 내역이 없습니다.</Text>
       )}
 
       {/* 플로팅 버튼 */}
-      <TouchableOpacity style={styles.floatingButton} onPress={() => router.push({ pathname: '/test', params: { email } })}>
+      <TouchableOpacity
+        style={styles.floatingButton}
+        onPress={() => router.push('/test')}
+      >
         <Text style={styles.floatingButtonText}>+</Text>
       </TouchableOpacity>
     </View>
@@ -105,7 +137,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 30,
+    padding: 20,
     backgroundColor: '#ffffff',
   },
   icon: { width: 24, height: 24 },
@@ -124,7 +156,7 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   levelBarContainer: {
-    width: '50%',
+    width: '60%',
     height: 15,
     marginTop: 10,
     position: 'relative',
@@ -159,6 +191,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     elevation: 2,
   },
+  cardContent: {
+    flex: 1,
+    marginRight: 10,
+  },
   reportTitle: {
     fontSize: 16,
     fontWeight: 'bold',
@@ -182,6 +218,11 @@ const styles = StyleSheet.create({
   inProgress: {
     backgroundColor: '#FF6347',
     color: '#fff',
+  },
+  reportImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
   },
   noDataText: {
     textAlign: 'center',
