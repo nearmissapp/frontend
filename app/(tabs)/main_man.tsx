@@ -94,10 +94,10 @@ export default function MainManScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* 병아리 이미지 및 텍스트 */}
+      {/* 사자 이미지 및 텍스트 */}
       <View style={styles.profileSection}>
-        <Image source={require('../../assets/images/chick.png')} style={styles.chickImage} />
-        <Text style={styles.levelText}>Lv. 2 조치자 페이지</Text>
+        <Image source={require('../../assets/images/lion_.png')} style={styles.chickImage} />
+        <Text style={styles.levelText}>안전 마법사</Text>
         {/* 게이지 */}
         <View style={styles.levelBarContainer}>
           <View style={styles.levelBarBackground} />

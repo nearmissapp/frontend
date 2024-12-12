@@ -219,47 +219,67 @@ export default function PhotoRegistration() {
       </TouchableOpacity>
 
       <Modal
-        visible={isTaggingModalVisible}
+  visible={isTaggingModalVisible}
+  animationType="slide"
+  transparent={false}>
+  <View style={styles.modalContainer}>
+    <TouchableOpacity
+      style={styles.closeButton}
+      onPress={() => setIsTaggingModalVisible(false)}>
+      <Text style={styles.closeButtonText}>X</Text>
+    </TouchableOpacity>
+    <Text style={styles.modalText}>비콘을 스캔하세요</Text>
+    
+    {/* 스캔 상태에 따른 UI 표시 */}
+    {isScanning ? (
+      <ActivityIndicator size="large" color="#007BFF" />
+    ) : (
+      <TouchableOpacity
+        style={styles.submitButton}
+        onPress={scanForBeacons}>
+        <Text style={styles.submitButtonText}>스캔 시작</Text>
+      </TouchableOpacity>
+    )}
+  </View>
+</Modal>
+
+      {/* Loading Modal */}
+      <Modal visible={isLoading} animationType="fade" transparent={true}>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>
+            AI가 위험요인을 찾고
+          </Text>
+          <Text style={styles.loadingText}>
+            담당자를 지정하고 있어요.
+          </Text>
+          <ActivityIndicator size="large" color="#FF6347" />
+        </View>
+      </Modal>
+
+      {/* Registration Complete Modal */}
+      <Modal
+        visible={isRegistered}
         animationType="slide"
         transparent={false}>
         <View style={styles.modalContainer}>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={() => setIsTaggingModalVisible(false)}>
-            <Text style={styles.closeButtonText}>X</Text>
-          </TouchableOpacity>
-          <Text style={styles.modalText}>비콘을 스캔 중입니다...</Text>
-          <ActivityIndicator size="large" color="#007BFF" />
-          {isScanning ? null : (
-            <TouchableOpacity
-              style={styles.submitButton}
-              onPress={scanForBeacons}>
-              <Text style={styles.submitButtonText}>스캔 시작</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      </Modal>
-
-      <Modal visible={isLoading} animationType="fade" transparent={true}>
-        <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>등록 중입니다...</Text>
-          <ActivityIndicator size="large" color="#007BFF" />
-        </View>
-      </Modal>
-
-      <Modal visible={isRegistered} animationType="slide" transparent={false}>
-        <View style={styles.modalContainer}>
           <Text style={styles.modalText}>등록 완료 되었습니다!</Text>
+          <Text style={styles.modalText}>내가 받은 포인트는 20점!</Text>
+
           <TouchableOpacity
             style={styles.homeButton}
             onPress={() => {
-              setIsRegistered(false);
-              router.push({ pathname: '/main_user', params: { email: email } });
-            }}>
+                setIsRegistered(false); // 모달 닫기
+                router.push({
+                    pathname: '/main_user',
+                    params: { email: email }, // email 전달
+                  });
+            }}
+            >
             <Text style={styles.homeButtonText}>홈으로 가기</Text>
           </TouchableOpacity>
         </View>
       </Modal>
+
     </View>
   );
 }
