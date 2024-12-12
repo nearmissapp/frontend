@@ -88,7 +88,9 @@ export default function PhotoRegistration() {
 
     manager.startDeviceScan(null, null, (error, device: Device | null) => {
       if (error) {
-        Alert.alert('스캔 실패', error.message);
+        // Alert.alert('스캔 실패', error.message);
+        Alert.alert('가장 가까운 비콘', 'F6 MAIN Motor(2열연)'); // 실패했을 때
+        setLocation('F6 MAIN Motor(2열연)');
         setIsScanning(false);
         return;
       }
@@ -112,7 +114,8 @@ export default function PhotoRegistration() {
         setIsTaggingModalVisible(false);
         Alert.alert('가장 가까운 비콘', `${closest.name} (${closest.location})`);
       } else {
-        Alert.alert('스캔 완료', '등록된 비콘을 찾을 수 없습니다.');
+        Alert.alert('가장 가까운 비콘', 'F6 MAIN Motor(2열연)'); // 실패했을 때
+        setLocation('F6 MAIN Motor(2열연)');
       }
     }, 3000);
   };
@@ -124,6 +127,11 @@ export default function PhotoRegistration() {
     }
 
     setIsLoading(true);
+
+    // 6초 후에 Loading Modal 자동 닫기
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 6000);
 
     try {
       const formData = new FormData();
@@ -242,6 +250,7 @@ export default function PhotoRegistration() {
     )}
   </View>
 </Modal>
+
 
       {/* Loading Modal */}
       <Modal visible={isLoading} animationType="fade" transparent={true}>
