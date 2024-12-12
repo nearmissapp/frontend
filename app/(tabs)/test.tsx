@@ -37,6 +37,7 @@ export default function PhotoRegistration() {
   const router = useRouter();
   const { email } = useLocalSearchParams();
   const manager = new BleManager();
+  
 
   useEffect(() => {
     return () => {
@@ -89,6 +90,7 @@ export default function PhotoRegistration() {
     manager.startDeviceScan(null, null, (error, device: Device | null) => {
       if (error) {
         // Alert.alert('스캔 실패', error.message);
+        setIsTaggingModalVisible(false); // 모달 닫기
         Alert.alert('가장 가까운 비콘', 'F6 MAIN Motor(2열연)'); // 실패했을 때
         setLocation('F6 MAIN Motor(2열연)');
         setIsScanning(false);
@@ -114,8 +116,9 @@ export default function PhotoRegistration() {
         setIsTaggingModalVisible(false);
         Alert.alert('가장 가까운 비콘', `${closest.name} (${closest.location})`);
       } else {
-        Alert.alert('가장 가까운 비콘', 'F6 MAIN Motor(2열연)'); // 실패했을 때
-        setLocation('F6 MAIN Motor(2열연)');
+        setIsTaggingModalVisible(false); // 모달 닫기
+        Alert.alert('가장 가까운 비콘', 'F7 MAIN Motor(2열연)'); // 실패했을 때
+        setLocation('F7 MAIN Motor(2열연)');
       }
     }, 3000);
   };
@@ -127,11 +130,6 @@ export default function PhotoRegistration() {
     }
 
     setIsLoading(true);
-
-    // 6초 후에 Loading Modal 자동 닫기
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 6000);
 
     try {
       const formData = new FormData();
@@ -165,7 +163,10 @@ export default function PhotoRegistration() {
       console.error('Error:', error);
       Alert.alert('오류', '서버와의 연결에 실패했습니다.');
     } finally {
-      setIsLoading(false);
+      // 6초 후에 Loading Modal 닫기
+    setTimeout(() => {
+      setIsLoading(false); // 모달 닫기
+    }, 6000); // 6초
     }
   };
 
@@ -179,13 +180,13 @@ export default function PhotoRegistration() {
       </View>
 
       <View style={styles.imagePlaceholder}>
+      <TouchableOpacity onPress={openCamera} style={styles.fullClickableArea}>
         {photo ? (
           <Image source={{ uri: photo }} style={styles.previewImage} />
         ) : (
-          <TouchableOpacity onPress={openCamera}>
-            <Text style={styles.placeholderText}>사진을 찍으려면 여기를 누르세요</Text>
-          </TouchableOpacity>
+          <Text style={styles.placeholderText}>사진을 찍으려면 여기를 누르세요</Text>
         )}
+      </TouchableOpacity>
       </View>
 
       <View style={styles.inputContainer}>
@@ -314,6 +315,11 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
+  },
+  fullClickableArea: {
+    flex: 1, // 부모 View 전체를 차지하도록 설정
+    justifyContent: 'center', // 내용 정렬 유지
+    alignItems: 'center',
   },
   imagePlaceholder: {
     width: '100%',
